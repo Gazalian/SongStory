@@ -11,6 +11,18 @@ export interface SearchResult {
   subtitle: string; // Artist name or Year
   context?: string; // e.g., "Original Version", "Cover by..."
   imageUrl?: string;
+  themeColor?: string;
+}
+
+export interface LyricsSegment {
+  section: string; // e.g. "Verse 1", "Chorus"
+  text: string;    // The lyrics text for this section
+  analysis: string; // Detailed interpretation
+}
+
+export interface Source {
+  title: string;
+  url: string;
 }
 
 export interface SongData {
@@ -18,23 +30,29 @@ export interface SongData {
   artist: string;
   year: string;
   genre: string;
-  themeColor: string; // Hex code suggestion
-  quickFacts: {
+  themeColor?: string;
+  imageUrl?: string;
+  quickFacts?: {
+    releaseDate: string;
     writers: string;
     producers: string;
     length: string;
     album: string;
-    chartPeak: string;
+    label: string;
   };
   hook: string;
   backstory: string;
-  lyricsMoments: Array<{ line: string; explanation: string }>;
+  meaningAndThemes: string;
+  lyricsMoments?: Array<{ line: string; explanation: string }>;
   recordingNotes: string;
-  versions: Array<{ artist: string; year: string; note: string }>;
+  artistCommentary: string;
   culturalImpact: string;
-  quotes: Array<{ text: string; source: string }>;
-  fanStories: Array<string>;
+  versions?: Array<{ artist: string; year: string; type: string }>;
+  trivia?: Array<string>;
+  relatedSongs?: Array<{ title: string; artist: string }>;
   mood: string;
+  fullLyricsBreakdown?: Array<LyricsSegment>;
+  sources?: Source[];
 }
 
 export interface AlbumData {
@@ -42,37 +60,57 @@ export interface AlbumData {
   artist: string;
   year: string;
   genre: string;
-  themeColor: string;
-  snapshot: {
+  themeColor?: string;
+  imageUrl?: string;
+  snapshot?: {
+    releaseDate: string;
     label: string;
     producer: string;
-    coreThemes: string;
+    length: string;
   };
   artistIntent: string;
-  trackBlurbs: Array<{ track: string; blurb: string }>;
+  tracklist?: Array<{ track: string; description: string }>;
   coverArtStory: string;
-  productionTimeline: string;
-  reception: {
+  recordingTimeline: string;
+  themesAndConcepts: string;
+  reception?: {
     then: string;
     now: string;
   };
-  legacy: string;
+  tourEra: string;
+  collaborators: string;
+  culturalImpact: string;
+  hiddenDetails: string;
+  sources?: Source[];
 }
 
 export interface ArtistData {
   name: string;
   yearsActive: string;
+  origin: string;
   genre: string;
-  themeColor: string;
-  essence: string; // One sentence bio
-  milestones: Array<{ year: string; event: string }>;
-  musicalDNA: string;
-  stageNameOrigin: string;
+  themeColor?: string;
+  imageUrl?: string;
+  bio: string; // One sentence bio
+  earlyLife: string;
+  careerJourney?: Array<{ era: string; description: string }>;
+  musicalStyle: string;
+  discographyHighlights?: Array<{ title: string; year: string; type: 'album' | 'song' }>;
+  awards: string;
   collaborations: string;
-  controversies: string;
-  discographyHighlights: Array<string>;
+  liveMoments: string;
+  quotes?: Array<string>;
+  trivia?: Array<string>;
+  relatedArtists?: Array<string>;
+  socials?: {
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+    tiktok?: string;
+    website?: string;
+  };
   visualStyle: string;
-  trivia: Array<string>;
+  sources?: Source[];
 }
 
 export type ViewState = 'search' | 'loading' | 'song' | 'album' | 'artist';

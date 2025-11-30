@@ -2,15 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Play, Disc, Music2, Mic2, Radio, Headphones, Sparkles } from 'lucide-react';
 
 interface IntroViewProps {
-  onEnter: () => void;
+  onEnter: (searchTerm?: string) => void;
 }
 
+// Using specific, reliable images for the intro to demonstrate accuracy. 
+// These are sourced from reliable creative commons or official-like placeholders.
 const SLIDES = [
-  { name: 'Asake', subtitle: 'Mr. Money With The Vibe', image: 'https://picsum.photos/seed/Asake/800/800' },
-  { name: 'Billie Eilish', subtitle: 'Hit Me Hard and Soft', image: 'https://picsum.photos/seed/Billie/800/800' },
-  { name: 'Frank Ocean', subtitle: 'Blonde', image: 'https://picsum.photos/seed/frank/800/800' },
-  { name: 'Kendrick Lamar', subtitle: 'To Pimp A Butterfly', image: 'https://picsum.photos/seed/kendrick/800/800' },
-  { name: 'Fleetwood Mac', subtitle: 'Rumours', image: 'https://picsum.photos/seed/rumours/800/800' },
+  { 
+    name: 'Asake', 
+    subtitle: 'Mr. Money With The Vibe', 
+    image: 'https://upload.wikimedia.org/wikipedia/en/2/23/Asake_-_Mr._Money_With_The_Vibe.png' // Album cover
+  },
+  { 
+    name: 'Billie Eilish', 
+    subtitle: 'Hit Me Hard and Soft', 
+    image: 'https://upload.wikimedia.org/wikipedia/en/a/aa/Billie_Eilish_-_Hit_Me_Hard_and_Soft.png' // Album cover
+  },
+  { 
+    name: 'Frank Ocean', 
+    subtitle: 'Blonde', 
+    image: 'https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg' 
+  },
+  { 
+    name: 'Kendrick Lamar', 
+    subtitle: 'To Pimp A Butterfly', 
+    image: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Kendrick_Lamar_-_To_Pimp_a_Butterfly.png' 
+  },
+  { 
+    name: 'Fleetwood Mac', 
+    subtitle: 'Rumours', 
+    image: 'https://upload.wikimedia.org/wikipedia/en/f/fb/FMacRumours.PNG' 
+  },
 ];
 
 const FLOATING_ICONS = [
@@ -59,7 +81,7 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
     }
   };
 
-  const handleInteraction = () => {
+  const handleInteraction = (shouldSearch: boolean = false) => {
     // Vibrate if supported
     if (navigator.vibrate) {
       navigator.vibrate(30);
@@ -68,7 +90,13 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
     playInteractionSound();
     
     // Small delay to allow feedback before transition
-    setTimeout(onEnter, 200);
+    setTimeout(() => {
+      const slide = SLIDES[currentSlide];
+      // If clicking the play/enter button on a specific slide, search for that artist + title
+      // If shouldSearch is false (default), we pass undefined to go to empty search page
+      const searchTerm = shouldSearch ? `${slide.name} ${slide.subtitle}` : undefined;
+      onEnter(searchTerm);
+    }, 200);
   };
 
   const slide = SLIDES[currentSlide];
@@ -86,6 +114,10 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
                src={s.image} 
                alt={s.name}
                className="w-full h-full object-cover animate-zoom-pulse"
+               onError={(e) => {
+                 // Fallback if Wikimedia link fails
+                 (e.target as HTMLImageElement).src = 'https://placehold.co/800x800/222/FFF?text=Music';
+               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30" />
             <div className="absolute inset-0 bg-black/10 backdrop-blur-[3px]" />
@@ -111,7 +143,7 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 w-full max-w-sm px-6 flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-sm px-6 flex flex-col items-center justify-center min-h-[500px]">
         
         {/* Lively Site Title */}
         <div className="mb-8 animate-wiggle">
@@ -122,7 +154,7 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
 
         {/* Minimal Player Card */}
         <div 
-            className="w-full group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2.5rem] p-8 shadow-2xl transition-all duration-500 hover:bg-white/15"
+            className="w-full group relative bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl transition-all duration-500 hover:bg-black/50"
         >
              {/* Glow Effect */}
              <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
@@ -130,7 +162,7 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
              {/* Top Metadata */}
              <div className="flex justify-between items-center text-white/50 text-[10px] tracking-[0.2em] uppercase font-bold mb-8">
                 <span>Now Playing</span>
-                <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-full">
+                <div className="flex items-center gap-1.5 bg-black/50 border border-white/5 px-2 py-1 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span> 
                   <span className="text-white/80">On Air</span>
                 </div>
@@ -139,12 +171,15 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
              {/* Center Art - Spinning Vinyl Effect */}
              <div className="flex justify-center mb-8 relative">
                  {/* Decorative rings */}
-                 <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/30 to-blue-500/30 rounded-full blur-2xl animate-pulse-slow"></div>
+                 <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/20 to-blue-500/20 rounded-full blur-2xl animate-pulse-slow"></div>
                  
                  <div className="relative w-48 h-48 rounded-full bg-black border-[6px] border-white/10 flex items-center justify-center shadow-2xl">
                     <img 
                       src={slide.image} 
                       className="absolute inset-0 w-full h-full object-cover rounded-full opacity-70 animate-spin-slow"
+                      onError={(e) => {
+                         (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/222/FFF?text=Music';
+                      }}
                     />
                     {/* Center hole of vinyl */}
                     <div className="relative z-10 w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center border border-white/10 shadow-inner">
@@ -171,7 +206,7 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
              {/* Primary Interaction Button */}
              <div className="flex justify-center">
                 <button
-                   onClick={handleInteraction}
+                   onClick={() => handleInteraction(false)}
                    className="relative group/btn flex flex-col items-center gap-4 focus:outline-none"
                 >
                    <div className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.2)] animate-pulse hover:scale-110 active:scale-95 transition-transform duration-300">
@@ -182,6 +217,13 @@ const IntroView: React.FC<IntroViewProps> = ({ onEnter }) => {
                    </span>
                 </button>
              </div>
+        </div>
+
+        {/* Footer Credit */}
+        <div className="mt-8 text-center">
+           <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] cursor-default animate-pulse-slow">
+              By: Ghazali
+           </p>
         </div>
 
       </div>
