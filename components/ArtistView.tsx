@@ -7,6 +7,7 @@ import {
 interface ArtistViewProps {
   data: ArtistData;
   onBack: () => void;
+  onSongClick: (title: string, artist: string) => void;
 }
 
 const SECTIONS = [
@@ -23,7 +24,7 @@ const TikTokIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const ArtistView: React.FC<ArtistViewProps> = ({ data, onBack }) => {
+const ArtistView: React.FC<ArtistViewProps> = ({ data, onBack, onSongClick }) => {
   const [activeSection, setActiveSection] = useState('bio');
   const [imgError, setImgError] = useState(false);
 
@@ -169,15 +170,22 @@ const ArtistView: React.FC<ArtistViewProps> = ({ data, onBack }) => {
              <h3 className="font-display text-3xl font-bold mb-6">Essential Listening</h3>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {discographyHighlights.map((item, i) => (
-                   <div key={i} className="glass-card p-4 rounded-xl flex items-center gap-4 hover:bg-white/10 transition-colors cursor-default">
-                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0 text-white/70">
+                   <button 
+                      key={i} 
+                      onClick={() => onSongClick(item.title, name)}
+                      className="glass-card p-4 rounded-xl flex items-center gap-4 hover:bg-white/10 transition-colors cursor-pointer w-full text-left group"
+                   >
+                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0 text-white/70 group-hover:text-white transition-colors">
                          {item.type === 'album' ? <DiscIcon /> : <MusicIcon />}
                       </div>
-                      <div>
-                         <h4 className="font-bold text-white line-clamp-1">{item.title}</h4>
+                      <div className="flex-1 min-w-0">
+                         <h4 className="font-bold text-white truncate group-hover:text-blue-300 transition-colors">{item.title}</h4>
                          <span className="text-xs text-white/50 uppercase font-bold tracking-wider">{item.year} • {item.type}</span>
                       </div>
-                   </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white/50">
+                        <Play size={16} fill="currentColor" />
+                      </div>
+                   </button>
                 ))}
              </div>
           </section>

@@ -3,13 +3,14 @@ import { SongData, LyricsSegment, Source } from '../types';
 import { getLyricsAnalysis } from '../services/geminiService';
 import { 
   Play, Share2, Quote, Radio, Info, Headphones, Music, Globe, ArrowRight,
-  List, BookOpen, Mic2, Award, Clock, Sparkles, Loader, Link as LinkIcon
+  List, BookOpen, Mic2, Award, Clock, Sparkles, Loader, Link as LinkIcon, AlertCircle
 } from 'lucide-react';
 
 interface SongViewProps {
   data: SongData;
   onBack: () => void;
   onArtistClick: (artist: string) => void;
+  onSongClick: (title: string, artist: string) => void;
 }
 
 const SpotifyIcon = () => (
@@ -66,7 +67,7 @@ const RevealOnScroll: React.FC<{ children: React.ReactNode; className?: string; 
   );
 };
 
-const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
+const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick, onSongClick }) => {
   const [activeSection, setActiveSection] = useState('snapshot');
   const [scrollY, setScrollY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -75,6 +76,7 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
   // State for Full Lyrics Analysis
   const [isLyricsAnalysisLoading, setIsLyricsAnalysisLoading] = useState(false);
   const [fullLyrics, setFullLyrics] = useState<LyricsSegment[] | null>(null);
+  const [lyricsError, setLyricsError] = useState(false);
 
   // Parallax & Scroll Progress Handler
   useEffect(() => {
@@ -101,9 +103,20 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
   const handleRevealLyrics = async () => {
     if (fullLyrics) return; // Already loaded
     setIsLyricsAnalysisLoading(true);
-    const result = await getLyricsAnalysis(data.title, data.artist);
-    setFullLyrics(result);
-    setIsLyricsAnalysisLoading(false);
+    setLyricsError(false);
+    
+    try {
+      const result = await getLyricsAnalysis(data.title, data.artist);
+      if (result && Array.isArray(result) && result.length > 0) {
+        setFullLyrics(result);
+      } else {
+        setLyricsError(true);
+      }
+    } catch (e) {
+      setLyricsError(true);
+    } finally {
+      setIsLyricsAnalysisLoading(false);
+    }
   };
 
   const spotifyLink = `https://open.spotify.com/search/${encodeURIComponent(data.title + ' ' + data.artist)}`;
@@ -112,7 +125,6 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
   const themeColor = data.themeColor || '#555';
 
   // Defensive helpers
-  const quickFacts = data.quickFacts || {};
   const lyricsMoments = data.lyricsMoments || [];
   const versions = data.versions || [];
   const relatedSongs = data.relatedSongs || [];
@@ -120,7 +132,7 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
   const sources = data.sources || [];
 
   return (
-    <div className="pb-32 bg-black min-h-screen">
+    <div className="pb-32 min-h-screen">
       
       {/* Sticky TOC Navigation Container */}
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10 shadow-2xl relative">
@@ -234,10 +246,10 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
                <p className="font-display text-3xl md:text-4xl font-medium leading-tight text-white mb-10 drop-shadow-md relative z-10">{data.hook}</p>
                
                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-8 border-t border-white/10 relative z-10">
-                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Album</div><div className="font-bold text-base text-white">{quickFacts.album || 'Single'}</div></div>
-                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Writers</div><div className="font-bold text-base text-white">{quickFacts.writers || data.artist}</div></div>
-                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Producers</div><div className="font-bold text-base text-white">{quickFacts.producers || 'Various'}</div></div>
-                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Length</div><div className="font-bold text-base text-white">{quickFacts.length || '--:--'}</div></div>
+                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Album</div><div className="font-bold text-base text-white">{data.quickFacts?.album || 'Single'}</div></div>
+                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Writers</div><div className="font-bold text-base text-white">{data.quickFacts?.writers || data.artist}</div></div>
+                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Producers</div><div className="font-bold text-base text-white">{data.quickFacts?.producers || 'Various'}</div></div>
+                  <div><div className="text-white/40 text-[10px] uppercase mb-2 font-bold tracking-widest">Length</div><div className="font-bold text-base text-white">{data.quickFacts?.length || '--:--'}</div></div>
                </div>
             </div>
           </section>
@@ -300,7 +312,7 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
             
             {/* Interactive Full Lyrics Analysis Button */}
             <RevealOnScroll className="mt-8">
-              {!fullLyrics && (
+              {!fullLyrics && !lyricsError && (
                 <button 
                   onClick={handleRevealLyrics}
                   disabled={isLyricsAnalysisLoading}
@@ -321,8 +333,17 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
                 </button>
               )}
 
+              {/* Error State */}
+              {lyricsError && (
+                 <div className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center gap-2 text-red-200">
+                    <AlertCircle size={20} />
+                    <span>Couldn't analyze lyrics at this moment. Please try again.</span>
+                    <button onClick={handleRevealLyrics} className="underline font-bold hover:text-white">Retry</button>
+                 </div>
+              )}
+
               {/* Full Lyrics Breakdown Rendering */}
-              {fullLyrics && (
+              {fullLyrics && Array.isArray(fullLyrics) && (
                 <div className="mt-10 space-y-12 animate-in fade-in slide-in-from-bottom-10 duration-700">
                   {fullLyrics.map((segment, i) => (
                     <div key={i} className="flex flex-col md:flex-row gap-6 md:gap-12 pb-12 border-b border-white/5 last:border-0 last:pb-0">
@@ -391,7 +412,12 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
                      <ul className="space-y-4">
                         {versions.slice(0, 3).map((v, i) => (
                           <li key={i} className="flex justify-between items-center text-sm border-b border-white/5 pb-3 last:border-0">
-                            <span className="font-bold text-white text-lg">{v.artist}</span>
+                            <button 
+                              onClick={() => onSongClick(data.title, v.artist)}
+                              className="font-bold text-white text-lg hover:text-blue-300 hover:underline transition-colors text-left"
+                            >
+                              {v.artist}
+                            </button>
                             <span className="text-zinc-500 font-medium">{v.type} ({v.year})</span>
                           </li>
                         ))}
@@ -405,7 +431,11 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
                      <h4 className="font-bold mb-6 flex items-center gap-3 text-sm uppercase tracking-widest text-white/50"><Music size={18}/> Related Songs</h4>
                      <ul className="space-y-4">
                         {relatedSongs.slice(0, 3).map((s, i) => (
-                          <li key={i} className="flex items-center gap-4 text-sm group">
+                          <button 
+                            key={i} 
+                            onClick={() => onSongClick(s.title, s.artist)}
+                            className="flex items-center gap-4 text-sm group w-full text-left"
+                          >
                             <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/40 group-hover:bg-white/20 group-hover:text-white transition-all">
                               <Play size={14} fill="currentColor" />
                             </div>
@@ -413,7 +443,7 @@ const SongView: React.FC<SongViewProps> = ({ data, onBack, onArtistClick }) => {
                               <div className="font-bold text-white text-lg group-hover:text-blue-300 transition-colors">{s.title}</div>
                               <div className="text-zinc-500">by {s.artist}</div>
                             </div>
-                          </li>
+                          </button>
                         ))}
                      </ul>
                   </div>

@@ -9,6 +9,7 @@ interface AlbumViewProps {
   data: AlbumData;
   onBack: () => void;
   onArtistClick: (artist: string) => void;
+  onSongClick: (title: string, artist: string) => void;
 }
 
 const SpotifyIcon = () => (
@@ -33,7 +34,7 @@ const SECTIONS = [
 
 function ListIcon(props: any) { return <AlignLeft {...props} />; }
 
-const AlbumView: React.FC<AlbumViewProps> = ({ data, onBack, onArtistClick }) => {
+const AlbumView: React.FC<AlbumViewProps> = ({ data, onBack, onArtistClick, onSongClick }) => {
   const [activeSection, setActiveSection] = useState('overview');
   const [imgError, setImgError] = useState(false);
 
@@ -47,7 +48,6 @@ const AlbumView: React.FC<AlbumViewProps> = ({ data, onBack, onArtistClick }) =>
   const appleMusicLink = `https://music.apple.com/us/search?term=${encodeURIComponent(data.title + ' ' + data.artist + ' album')}`;
 
   const themeColor = data.themeColor || '#444';
-  const snapshot = data.snapshot || {};
   const tracklist = data.tracklist || [];
   const reception = data.reception || { then: '', now: '' };
   const sources = data.sources || [];
@@ -118,9 +118,9 @@ const AlbumView: React.FC<AlbumViewProps> = ({ data, onBack, onArtistClick }) =>
         
         {/* Overview */}
         <section id="overview" className="scroll-mt-24 grid grid-cols-2 md:grid-cols-4 gap-4 glass-card p-6 rounded-2xl border-t-4" style={{borderTopColor: themeColor}}>
-           <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Released</div><div className="text-sm font-medium">{snapshot.releaseDate || 'N/A'}</div></div>
-           <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Label</div><div className="text-sm font-medium truncate">{snapshot.label || 'N/A'}</div></div>
-           <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Producer</div><div className="text-sm font-medium truncate">{snapshot.producer || 'N/A'}</div></div>
+           <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Released</div><div className="text-sm font-medium">{data.snapshot?.releaseDate || 'N/A'}</div></div>
+           <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Label</div><div className="text-sm font-medium truncate">{data.snapshot?.label || 'N/A'}</div></div>
+           <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Producer</div><div className="text-sm font-medium truncate">{data.snapshot?.producer || 'N/A'}</div></div>
            <div><div className="text-white/30 text-[10px] uppercase font-bold tracking-wider">Genre</div><div className="text-sm font-medium">{data.genre}</div></div>
         </section>
 
@@ -154,13 +154,17 @@ const AlbumView: React.FC<AlbumViewProps> = ({ data, onBack, onArtistClick }) =>
             </div>
             <div className="space-y-2">
               {tracklist.map((track, i) => (
-                <div key={i} className="group p-4 rounded-xl hover:bg-white/5 transition-colors border-b border-white/5">
+                <button 
+                  key={i} 
+                  onClick={() => onSongClick(track.track, data.artist)}
+                  className="group w-full text-left p-4 rounded-xl hover:bg-white/5 transition-colors border-b border-white/5 cursor-pointer"
+                >
                   <div className="flex items-baseline gap-3 mb-1">
                     <span className="text-white/30 font-mono text-xs w-6">{(i + 1).toString().padStart(2, '0')}</span>
-                    <h4 className="font-bold text-white/90 text-base group-hover:text-white transition-colors">{track.track}</h4>
+                    <h4 className="font-bold text-white/90 text-base group-hover:text-blue-200 transition-colors">{track.track}</h4>
                   </div>
                   <p className="text-sm text-white/50 pl-9 group-hover:text-white/70 transition-colors line-clamp-2">{track.description}</p>
-                </div>
+                </button>
               ))}
             </div>
           </section>

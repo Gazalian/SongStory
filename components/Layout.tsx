@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -7,45 +7,76 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, themeColor, genre }) => {
-  // Use a default dark color if none provided
-  const baseColor = themeColor || '#4c1d95'; // Defaulting to a deep purple if no theme
+  // Use the theme color if available, otherwise default to deep purple
+  const baseColor = themeColor || '#4c1d95'; 
   
+  // Generate stable random particles
+  const particles = useMemo(() => {
+    return Array.from({ length: 35 }).map((_, i) => {
+      // Mix different animations for natural movement
+      const animType = i % 3;
+      let animationClass = 'animate-float'; // Default bobbing
+      if (animType === 1) animationClass = 'animate-drift'; // Horizontal drift
+      if (animType === 2) animationClass = 'animate-pulse-slow'; // Pulsing
+
+      return {
+        id: i,
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        size: Math.random() * 3 + 1, // 1px to 4px
+        opacity: Math.random() * 0.3 + 0.05, // Very subtle
+        animationDuration: `${Math.random() * 15 + 15}s`, // Slow: 15-30s
+        animationDelay: `${Math.random() * 10}s`,
+        animationClass
+      };
+    });
+  }, []);
+
   return (
     <div 
-      className="min-h-screen w-full relative overflow-x-hidden text-slate-100 bg-black"
+      className="min-h-screen w-full relative overflow-x-hidden text-slate-100 bg-black transition-colors duration-1000 ease-in-out"
     >
       {/* Animated Background Layer */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        {/* Orb 1 - Top Left */}
+        
+        {/* Dynamic Theme Gradient - This replaces the flat black */}
         <div 
-          className="absolute top-[-10%] left-[-10%] w-[80vw] h-[80vw] rounded-full mix-blend-screen filter blur-[80px] opacity-20 animate-blob"
-          style={{ backgroundColor: baseColor }}
-        />
-        {/* Orb 2 - Top Right (Delayed) */}
-        <div 
-          className="absolute top-[-10%] right-[-20%] w-[80vw] h-[80vw] rounded-full mix-blend-screen filter blur-[80px] opacity-20 animate-blob"
+          className="absolute inset-0 transition-colors duration-1000 ease-in-out"
           style={{ 
-            backgroundColor: baseColor, 
-            animationDelay: '2s',
-            animationDirection: 'reverse'
+            background: `radial-gradient(circle at 50% -20%, ${baseColor}, #050505 80%)` 
           }}
         />
-        {/* Orb 3 - Bottom Left (Delayed more) */}
+        
+        {/* Secondary ambient glow */}
         <div 
-          className="absolute bottom-[-20%] left-[20%] w-[80vw] h-[80vw] rounded-full mix-blend-screen filter blur-[80px] opacity-15 animate-blob"
-          style={{ 
-            backgroundColor: baseColor,
-            animationDelay: '4s' 
-          }}
+           className="absolute bottom-0 left-0 w-full h-1/2 opacity-20"
+           style={{
+             background: `linear-gradient(to top, ${baseColor}, transparent)`
+           }}
         />
+
+        {/* Particle System */}
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            className={`absolute rounded-full bg-white ${p.animationClass}`}
+            style={{
+              top: p.top,
+              left: p.left,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              opacity: p.opacity,
+              animationDuration: p.animationDuration,
+              animationDelay: p.animationDelay,
+              boxShadow: `0 0 ${p.size * 2}px ${baseColor}` // Subtle glow matching theme
+            }}
+          />
+        ))}
         
         {/* Noise Texture for that premium grainy feel */}
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-screen"></div>
         
-        {/* Dark Overlay Gradient to ensure text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/90"></div>
-        
-        {/* Dynamic Genre Overlay - Subtle Tint */}
+        {/* Genre-based tint overlay */}
         {genre && (
           <div className={`absolute inset-0 opacity-10 mix-blend-overlay
             ${genre.toLowerCase().includes('pop') ? 'bg-gradient-to-tr from-pink-500 to-blue-500' : ''}

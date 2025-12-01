@@ -33,7 +33,15 @@ const cleanAndParseJSON = <T>(text: string): T | null => {
 
     if (start !== -1 && end !== 0) {
         cleaned = cleaned.substring(start, end);
-        return JSON.parse(cleaned) as T;
+        
+        // Parse with a reviver function to clean citations from all strings
+        return JSON.parse(cleaned, (key, value) => {
+            if (typeof value === 'string') {
+                // Regex to remove [1], [12], [1, 2] etc.
+                return value.replace(/\[\d+(?:,\s*\d+)*\]/g, '').replace(/\s+([,.])/g, '$1').trim();
+            }
+            return value;
+        }) as T;
     }
     
     return null;
@@ -65,20 +73,21 @@ const extractSources = (response: any): Source[] => {
 };
 
 const SYSTEM_INSTRUCTION_BASE = `
-You are SongStory, a world-class music historian and researcher with GLOBAL expertise.
-IMPORTANT: You have specialized, deep knowledge of Nigerian Music (Afrobeats, Highlife, Fuji, Hip-Hop, Alte, Gospel) and African music history.
+You are SongStory, a world-class music historian.
+IMPORTANT: You have specialized knowledge of Global and Nigerian Music.
 
 RULES FOR VISUALS & ACCURACY:
-1. USE GOOGLE SEARCH to verify EVERY fact and EVERY image.
-2. IMAGE URLS - STRICT REQUIREMENT:
-   - You MUST provide a **direct image file URL** (ending in .jpg, .png, .jpeg, .webp).
-   - **PRIORITY SOURCE**: Wikipedia / Wikimedia Commons (URLs usually containing 'upload.wikimedia.org').
-   - **ALTERNATIVE**: Official Music CDNs (Spotify 'i.scdn.co', Apple 'mzstatic.com').
-   - DO NOT return a generic webpage URL. It MUST be the actual image file.
-   - If no valid image file is found, return this placeholder: 'https://placehold.co/600x600/101010/FFF?text=No+Image'
-3. THEME COLOR: Extract a hex color from the album art or artist's visual brand.
-4. NIGERIAN CONTEXT: When discussing Nigerian/African music, explain Pidgin slang, cultural references, and local impact accurately.
-5. STRICT JSON: Your output must be a VALID JSON string. Do not include conversational text outside the JSON.
+1. **IMAGE SOURCING**: You MUST provide a **valid, direct image URL** (jpg/png/webp).
+   - **PRIORITY SOURCES**: Search specifically for URLs from:
+     - \`i.scdn.co\` (Spotify)
+     - \`mzstatic.com\` (Apple Music)
+     - \`upload.wikimedia.org\` (Wikipedia)
+     - \`images.genius.com\`
+     - \`m.media-amazon.com\`
+   - **DO NOT** return an empty string or null for "imageUrl". SEARCH UNTIL YOU FIND ONE.
+2. **THEME COLOR**: Extract a vibrant hex color from the album art (e.g., #FF5733).
+3. **STRICT JSON**: Output ONLY valid JSON.
+4. **CLEAN TEXT**: Do NOT include citation numbers (e.g. [1], [2]) in text.
 `;
 
 // --- Service Functions ---
@@ -91,12 +100,12 @@ export const searchMusic = async (query: string): Promise<SearchResult[]> => {
       
       Instructions:
       1. Use Google Search to find the most relevant Song, Artist, or Album.
-      2. If the user searches for a Nigerian artist/song (e.g. Asake, Wizkid, Burna Boy), prioritize them.
-      3. **IMAGES**: For EACH result, find the **Wikimedia/Wikipedia image URL** (upload.wikimedia.org) or a high-quality streaming CDN URL.
+      2. If the user searches for a Nigerian artist/song (e.g. Asake, Wizkid), prioritize them.
+      3. **IMAGES**: For EACH result, find a valid cover art URL from Spotify/Apple/Wiki/Genius. **THIS IS MANDATORY**.
       4. Return a JSON array of objects with fields: id, type (song|album|artist), title, subtitle, imageUrl, themeColor.
       `,
       config: {
-        tools: [{ googleSearch: {} }], // Enable search for grounding
+        tools: [{ googleSearch: {} }],
         systemInstruction: SYSTEM_INSTRUCTION_BASE,
       },
     });
@@ -117,12 +126,10 @@ export const getSongStory = async (title: string, artist: string): Promise<SongD
       contents: `Generate a detailed SongStory JSON for "${title}" by "${artist}".
       
       CRITICAL REQUIREMENTS:
-      1. **Quick Facts**: You MUST search for and fill in: 'album', 'writers', 'producers', 'length', 'releaseDate'. Do NOT use "N/A". Search specifically for credits.
-      2. **Lyrics Moments**: You MUST provide an array 'lyricsMoments' with at least 3 items. Each item must have:
-         - 'line': A key lyric from the song.
-         - 'explanation': A deep analysis of what that line means in context.
-      3. **Hook**: This MUST be a single, standout FACT, AWARD, CHART STAT, or MILESTONE. Do NOT summarize the song meaning or lyrics. Focus on: Awards won, Chart positions (e.g. 'Spent 14 weeks at #1'), Records broken, or Unique achievements.
-      4. **Image**: Find the OFFICIAL cover art URL. **PRIORITY: upload.wikimedia.org** or Spotify CDN.
+      1. **Image**: Find the official cover art URL (Spotify/Apple/Wiki/Genius).
+      2. **Quick Facts**: Search for 'album', 'writers', 'producers', 'length', 'releaseDate'.
+      3. **Lyrics Moments**: Provide an array 'lyricsMoments' with at least 3 items (line + explanation).
+      4. **Hook**: This MUST be a single, standout FACT, AWARD, or MILESTONE.
       
       Expected JSON Structure:
       {
@@ -133,25 +140,23 @@ export const getSongStory = async (title: string, artist: string): Promise<SongD
         "imageUrl": "url_string",
         "themeColor": "hex_string",
         "quickFacts": {
-          "album": "string",
+          "releaseDate": "string",
           "writers": "string", 
-          "producers": "string",
-          "length": "string (e.g. 3:45)",
-          "label": "string",
-          "releaseDate": "string"
+          "producers": "string", 
+          "length": "string", 
+          "album": "string", 
+          "label": "string"
         },
         "hook": "string",
         "backstory": "string",
         "meaningAndThemes": "string",
-        "lyricsMoments": [
-          { "line": "string", "explanation": "string" }
-        ],
+        "lyricsMoments": [ { "line": "string", "explanation": "string" } ],
         "recordingNotes": "string",
         "artistCommentary": "string",
         "culturalImpact": "string",
-        "versions": [{ "artist": "string", "year": "string", "type": "string" }],
-        "trivia": ["string"],
-        "relatedSongs": [{ "title": "string", "artist": "string" }],
+        "versions": [ { "artist": "string", "year": "string", "type": "string" } ],
+        "trivia": [ "string" ],
+        "relatedSongs": [ { "title": "string", "artist": "string" } ],
         "mood": "string"
       }
       `,
@@ -163,13 +168,71 @@ export const getSongStory = async (title: string, artist: string): Promise<SongD
 
     const text = response.text;
     if (!text) return null;
+    
     const data = cleanAndParseJSON<SongData>(text);
     if (data) {
       data.sources = extractSources(response);
     }
     return data;
   } catch (error) {
-    console.error("Song detail error", error);
+    console.error("Get Song Story error", error);
+    return null;
+  }
+};
+
+export const getAlbumStory = async (title: string, artist: string): Promise<AlbumData | null> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: `Generate a detailed AlbumStory JSON for "${title}" by "${artist}".
+      
+      CRITICAL REQUIREMENTS:
+      1. **Image**: Find the official album cover URL (Spotify/Apple/Wiki).
+      2. **Tracklist**: Search for the full tracklist.
+      3. **Snapshot**: Fill in releaseDate, label, producer, length.
+      
+      Expected JSON Structure:
+      {
+        "title": "string",
+        "artist": "string",
+        "year": "string",
+        "genre": "string",
+        "imageUrl": "url_string",
+        "themeColor": "hex_string",
+        "snapshot": {
+            "releaseDate": "string",
+            "label": "string",
+            "producer": "string",
+            "length": "string"
+        },
+        "artistIntent": "string",
+        "tracklist": [ { "track": "string", "description": "string" } ],
+        "coverArtStory": "string",
+        "recordingTimeline": "string",
+        "themesAndConcepts": "string",
+        "reception": { "then": "string", "now": "string" },
+        "tourEra": "string",
+        "collaborators": "string",
+        "culturalImpact": "string",
+        "hiddenDetails": "string"
+      }
+      `,
+      config: {
+        tools: [{ googleSearch: {} }],
+        systemInstruction: SYSTEM_INSTRUCTION_BASE,
+      },
+    });
+
+    const text = response.text;
+    if (!text) return null;
+    
+    const data = cleanAndParseJSON<AlbumData>(text);
+    if (data) {
+      data.sources = extractSources(response);
+    }
+    return data;
+  } catch (error) {
+    console.error("Get Album Story error", error);
     return null;
   }
 };
@@ -180,33 +243,29 @@ export const getArtistStory = async (name: string): Promise<ArtistData | null> =
       model: MODEL_NAME,
       contents: `Generate a detailed ArtistStory JSON for "${name}".
       
-      Requirements:
-      1. Use Google Search to verify bio, career milestones, and discography.
-      2. Find a high-quality, verified photo of the artist (imageUrl). **PRIORITY: upload.wikimedia.org**.
-      3. Return a JSON object matching the Expected Structure below.
-      4. Include official social media links in the 'socials' object if found.
-
+      CRITICAL REQUIREMENTS:
+      1. **Image**: Find the official artist photo URL (Spotify/Apple/Wiki).
+      2. **Socials**: Search for official social media handles.
+      3. **Career**: Include major eras.
+      
       Expected JSON Structure:
       {
         "name": "string",
         "yearsActive": "string",
         "origin": "string",
         "genre": "string",
-        "themeColor": "hex_string",
         "imageUrl": "url_string",
+        "themeColor": "hex_string",
         "bio": "string",
         "earlyLife": "string",
-        "careerJourney": [
-          { "era": "string", "description": "string" }
-        ],
+        "careerJourney": [ { "era": "string", "description": "string" } ],
         "musicalStyle": "string",
-        "discographyHighlights": [
-          { "title": "string", "year": "string", "type": "album or song" }
-        ],
+        "discographyHighlights": [ { "title": "string", "year": "string", "type": "album|song" } ],
         "awards": "string",
         "collaborations": "string",
         "liveMoments": "string",
-        "trivia": ["string"],
+        "quotes": [ "string" ],
+        "trivia": [ "string" ],
         "socials": {
           "instagram": "url",
           "twitter": "url",
@@ -225,59 +284,30 @@ export const getArtistStory = async (name: string): Promise<ArtistData | null> =
 
     const text = response.text;
     if (!text) return null;
+    
     const data = cleanAndParseJSON<ArtistData>(text);
     if (data) {
       data.sources = extractSources(response);
     }
     return data;
   } catch (error) {
-    console.error("Artist detail error", error);
+    console.error("Get Artist Story error", error);
     return null;
   }
 };
 
-export const getAlbumStory = async (title: string, artist: string): Promise<AlbumData | null> => {
+export const getLyricsAnalysis = async (title: string, artist: string): Promise<LyricsSegment[]> => {
   try {
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
-      contents: `Generate a detailed AlbumStory JSON for "${title}" by "${artist}".
+      contents: `Perform a detailed line-by-line or section-by-section analysis of the lyrics for "${title}" by "${artist}".
       
-      CRITICAL REQUIREMENTS:
-      1. Use Google Search to verify EVERY fact.
-      2. **Snapshot**: You MUST search for release date, label, producers.
-      3. **Tracklist**: List the tracks with a short 1-sentence vibe description for each.
-      4. **Reception**: Contrast 'then' (initial reviews) vs 'now' (legacy).
-      5. **Image**: Find the OFFICIAL album cover art URL. **PRIORITY: upload.wikimedia.org** or Spotify CDN.
-      
-      Expected JSON Structure:
+      Return ONLY a JSON Array.
+      Each item in the array should be:
       {
-        "title": "string",
-        "artist": "string",
-        "year": "string",
-        "genre": "string",
-        "themeColor": "hex_string",
-        "imageUrl": "url_string",
-        "snapshot": {
-          "releaseDate": "string",
-          "label": "string",
-          "producer": "string",
-          "length": "string"
-        },
-        "artistIntent": "string",
-        "tracklist": [
-          { "track": "string", "description": "string" }
-        ],
-        "coverArtStory": "string",
-        "recordingTimeline": "string",
-        "themesAndConcepts": "string",
-        "reception": {
-          "then": "string",
-          "now": "string"
-        },
-        "tourEra": "string",
-        "collaborators": "string",
-        "culturalImpact": "string",
-        "hiddenDetails": "string"
+        "section": "Verse 1",
+        "text": "The actual lyrics text...",
+        "analysis": "Deep explanation of the meaning."
       }
       `,
       config: {
@@ -287,39 +317,20 @@ export const getAlbumStory = async (title: string, artist: string): Promise<Albu
     });
 
     const text = response.text;
-    if (!text) return null;
-    const data = cleanAndParseJSON<AlbumData>(text);
-    if (data) {
-      data.sources = extractSources(response);
+    if (!text) return [];
+    
+    const raw = cleanAndParseJSON<any>(text);
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') {
+        const values = Object.values(raw);
+        for (const val of values) {
+            if (Array.isArray(val)) return val as LyricsSegment[];
+        }
     }
-    return data;
+    
+    return [];
   } catch (error) {
-    console.error("Album detail error", error);
-    return null;
-  }
-};
-
-export const getLyricsAnalysis = async (title: string, artist: string): Promise<LyricsSegment[] | null> => {
-  try {
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: `Provide a detailed lyrics analysis JSON for "${title}" by "${artist}".
-      
-      Requirements:
-      1. Return a JSON array of objects with: section, text, analysis.
-      2. Use search to ensure lyric accuracy.
-      `,
-      config: {
-        tools: [{ googleSearch: {} }],
-        systemInstruction: SYSTEM_INSTRUCTION_BASE,
-      },
-    });
-
-    const text = response.text;
-    if (!text) return null;
-    return cleanAndParseJSON<LyricsSegment[]>(text);
-  } catch (error) {
-    console.error("Lyrics analysis error", error);
-    return null;
+    console.error("Get Lyrics Analysis error", error);
+    return [];
   }
 };

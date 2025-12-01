@@ -59,9 +59,9 @@ const App = () => {
     setError(null);
 
     try {
-      // Add timeout race condition (25 seconds)
+      // Add timeout race condition (Increased to 45 seconds to avoid premature timeouts)
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Request timed out")), 25000)
+        setTimeout(() => reject(new Error("Request timed out")), 45000)
       );
 
       const results = await Promise.race([
@@ -80,7 +80,7 @@ const App = () => {
       }
     } catch (err) {
       console.error(err);
-      setError("The archives are taking too long to respond. Please try again.");
+      setError("The archives are taking too long to respond. Please check your connection and try again.");
       setViewState('search');
     }
   };
@@ -103,9 +103,9 @@ const App = () => {
     setLoadingGenre(result.type === EntityType.Song ? 'pop' : 'rock'); 
     
     try {
-      // Add timeout race condition (35 seconds for detailed story)
+      // Add timeout race condition (Increased to 60 seconds for detailed story verification)
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Request timed out")), 35000)
+        setTimeout(() => reject(new Error("Request timed out")), 60000)
       );
 
       let fetchPromise;
@@ -145,6 +145,10 @@ const App = () => {
   const handleArtistClick = (artistName: string) => {
     performSearch(artistName);
   };
+  
+  const handleSongClick = (title: string, artist: string) => {
+    performSearch(`${title} ${artist}`);
+  };
 
   const renderContent = () => {
     if (viewState === 'loading') {
@@ -158,6 +162,7 @@ const App = () => {
             data={currentData as SongData} 
             onBack={() => setViewState('search')} 
             onArtistClick={handleArtistClick}
+            onSongClick={handleSongClick}
           />
         </div>
       );
@@ -166,7 +171,11 @@ const App = () => {
     if (viewState === 'artist' && currentData) {
       return (
          <div className="max-w-2xl mx-auto w-full">
-            <ArtistView data={currentData as ArtistData} onBack={() => setViewState('search')} />
+            <ArtistView 
+              data={currentData as ArtistData} 
+              onBack={() => setViewState('search')} 
+              onSongClick={handleSongClick}
+            />
          </div>
       );
     }
@@ -178,6 +187,7 @@ const App = () => {
               data={currentData as AlbumData} 
               onBack={() => setViewState('search')} 
               onArtistClick={handleArtistClick}
+              onSongClick={handleSongClick}
             />
          </div>
       );

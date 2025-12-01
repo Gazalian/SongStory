@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, X, Clock, ChevronRight, Music, Mic2, Disc, Guitar, Radio, Piano, Drum, Music2, Music4 } from 'lucide-react';
+import { Search, X, Clock, ChevronRight, Music, Mic2, Disc, Guitar, Radio, Piano, Drum, Music2, Music4, ArrowRight } from 'lucide-react';
 import { SearchResult, EntityType } from '../types';
 
 interface SearchViewProps {
@@ -124,14 +124,14 @@ const SearchView: React.FC<SearchViewProps> = ({
               {/* Glow behind input */}
               <div className={`absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur opacity-20 group-hover:opacity-50 transition duration-1000 ${hasResults ? 'opacity-20' : ''}`}></div>
               
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input 
                   type="text" 
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search artist, song, or album..."
                   className={`
-                    w-full pl-14 pr-12 rounded-2xl 
+                    w-full pl-14 pr-24 rounded-2xl 
                     bg-zinc-900/90 backdrop-blur-xl border border-white/10 
                     text-white placeholder-zinc-500 
                     focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent
@@ -140,18 +140,29 @@ const SearchView: React.FC<SearchViewProps> = ({
                   `}
                   autoFocus={!hasResults}
                 />
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-white transition-colors" size={hasResults ? 20 : 24} />
-                {query && (
-                  <button type="button" onClick={onReset} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors">
-                    <X size={18} />
+                <Search className="absolute left-5 text-zinc-400 group-focus-within:text-white transition-colors" size={hasResults ? 20 : 24} />
+                
+                {/* Right Actions: Clear & Search Button */}
+                <div className="absolute right-3 flex items-center gap-2">
+                  {query && (
+                    <button type="button" onClick={onReset} className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors" aria-label="Clear">
+                      <X size={18} />
+                    </button>
+                  )}
+                  <button 
+                    type="submit" 
+                    className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-all group-hover:translate-x-1 active:scale-95"
+                    aria-label="Search"
+                  >
+                    <ArrowRight size={24} strokeWidth={2} />
                   </button>
-                )}
+                </div>
               </div>
            </form>
            
            {/* Credit close to search bar */}
-           <div className={`mt-3 text-center transition-opacity duration-300 ${hasResults ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
-              <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em]">
+           <div className={`mt-4 text-center transition-opacity duration-300 ${hasResults ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+              <p className="text-white font-bold uppercase tracking-[0.3em] text-[10px] animate-pulse-slow drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
                 By: Ghazali
               </p>
            </div>
