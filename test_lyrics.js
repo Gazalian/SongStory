@@ -25,11 +25,22 @@ async function testLyrics() {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
+        const fs = require('fs');
         console.log("Response received:");
         console.log(text);
     } catch (error) {
-        console.error("Error:", error);
+        const fs = require('fs');
+        console.error("Error occurred:");
+        const errorLog = {
+            message: error.message,
+            stack: error.stack,
+            response: error.response,
+            fullError: JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)))
+        };
+        fs.writeFileSync('error_log.json', JSON.stringify(errorLog, null, 2));
+        console.log("Error details written to error_log.json");
     }
+
 }
 
 testLyrics();

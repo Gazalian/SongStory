@@ -120,7 +120,7 @@ CRITICAL RULES:
           return text;
         }
       } catch (error: any) {
-        console.log(`Model ${modelName} failed:`, error.message?.substring(0, 100));
+        console.error(`Model ${modelName} failed. RAW ERROR:`, JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
         continue;
       }
     }
@@ -685,7 +685,10 @@ CRITICAL RULES:
         });
         console.log("========================");
       } else {
-        console.error("Failed to list models:", data);
+        console.error("Failed to list models. Response:", data);
+        if (data.error) {
+          console.error("API Error Details:", JSON.stringify(data.error, null, 2));
+        }
       }
     } catch (e) {
       console.error("Error listing models:", e);
