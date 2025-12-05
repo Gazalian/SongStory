@@ -619,22 +619,40 @@ CRITICAL RULES:
     try {
       const prompt = `Analyze the lyrics of "${title}" by "${artist}" section by section.
 
-    Return a JSON array where each object has:
+    Return a STRICT JSON ARRAY (not an object) where each item is:
     {
       "section": "section name (e.g., Verse 1, Chorus, Bridge)",
       "text": "the actual lyrics for this section",
       "analysis": "detailed interpretation and meaning"
     }
 
-    Include all major sections of the song.`;
+    Include all major sections of the song. Do not wrap the array in any object.`;
 
       const text = await this.tryWithModels(prompt);
 
       if (!text) return [];
 
-      const raw = this.cleanAndParseJSON<LyricsSegment[]>(text);
-      if (Array.isArray(raw)) return raw;
+      console.error("DEBUG: Raw Lyrics Response:", text); // Using error to ensure visibility
 
+      const raw = this.cleanAndParseJSON<any>(text);
+      console.error("DEBUG: Parsed Lyrics Object:", raw);
+
+      if (Array.isArray(raw)) {
+        console.error("DEBUG: Returning array directly");
+        return raw;
+      }
+
+      // Handle case where model wraps array in an object (e.g. { "lyrics": [...] })
+      if (raw && typeof raw === 'object') {
+        const values = Object.values(raw);
+        const array = values.find(v => Array.isArray(v));
+        if (array) {
+          console.error("DEBUG: Found array in object wrapper");
+          return array as LyricsSegment[];
+        }
+      }
+
+      console.error("DEBUG: No array found in response");
       return [];
     } catch (error) {
       console.error("Get Lyrics Analysis error", error);
