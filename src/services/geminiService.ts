@@ -2,7 +2,6 @@
 import {
   GoogleGenerativeAI,
   GenerativeModel,
-  GenerativeModelParams,
 } from "@google/generative-ai";
 import { SearchResult, SongData, AlbumData, ArtistData, LyricsSegment, Source, EntityType } from "../types";
 import { imageService } from "./imageService";
@@ -91,7 +90,7 @@ CRITICAL RULES:
    * Returns a generative model instance with optional system instruction
    */
   private getModel(model?: GeminiModel, systemInstruction?: string): GenerativeModel {
-    const params: GenerativeModelParams = {
+    const params: any = {
       model: model || this.currentModel,
       ...(systemInstruction ? { systemInstruction } : { systemInstruction: this.systemInstruction }),
     };
@@ -188,7 +187,7 @@ CRITICAL RULES:
    * Helper function for default images
    */
   private getDefaultImage(type: string | EntityType): string {
-    const typeStr = typeof type === 'string' ? type : type.toString();
+    const typeStr = type as string;
     switch (typeStr) {
       case 'song':
       case EntityType.Song:
@@ -208,7 +207,7 @@ CRITICAL RULES:
    * Helper function for default colors
    */
   private getDefaultColor(type: string | EntityType): string {
-    const typeStr = typeof type === 'string' ? type : type.toString();
+    const typeStr = type as string;
     switch (typeStr) {
       case 'song':
       case EntityType.Song:
@@ -344,9 +343,9 @@ CRITICAL RULES:
         let realImageUrl: string | null = null;
 
         try {
-          if (result.type === 'artist' || result.type === EntityType.Artist) {
+          if (result.type === EntityType.Artist) {
             realImageUrl = await imageService.getArtistImage(result.title);
-          } else if (result.type === 'album' || result.type === EntityType.Album) {
+          } else if (result.type === EntityType.Album) {
             realImageUrl = await imageService.getAlbumImage(result.title, result.subtitle || '');
           } else {
             realImageUrl = await imageService.getSongImage(result.title, result.subtitle || '');
