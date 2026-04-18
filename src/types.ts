@@ -14,12 +14,6 @@ export interface SearchResult {
   themeColor?: string;
 }
 
-export interface LyricsSegment {
-  section: string; // e.g. "Verse 1", "Chorus"
-  text: string;    // The lyrics text for this section
-  analysis: string; // Detailed interpretation
-}
-
 export interface Source {
   title: string;
   url: string;
@@ -43,7 +37,6 @@ export interface SongData {
   hook: string;
   backstory: string;
   meaningAndThemes: string;
-  lyricsMoments?: Array<{ line: string; explanation: string }>;
   recordingNotes: string;
   artistCommentary: string;
   culturalImpact: string;
@@ -51,7 +44,6 @@ export interface SongData {
   trivia?: Array<string>;
   relatedSongs?: Array<{ title: string; artist: string }>;
   mood: string;
-  fullLyricsBreakdown?: Array<LyricsSegment>;
   sources?: Source[];
 }
 
