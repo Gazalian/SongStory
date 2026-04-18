@@ -88,7 +88,7 @@ CRITICAL RULES:
                 }
             }
             catch (error) {
-                console.log(`Model ${modelName} failed:`, error.message?.substring(0, 100));
+                console.error(`Model ${modelName} failed. RAW ERROR:`, JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
                 continue;
             }
         }
@@ -544,25 +544,61 @@ CRITICAL RULES:
     }
     /**
      * Get lyrics analysis (this is the one was missing the export!)
+     * @param rawLyrics - Full lyrics text fetched from a lyrics API (Musixmatch / lyrics.ovh).
+     *   When provided, Gemini analyses the real lyrics. Without it, Gemini tries to recall
+     *   lyrics from training data, which it cannot do accurately for copyrighted content.
      */
-    async getLyricsAnalysis(title, artist) {
+    async getLyricsAnalysis(title, artist, rawLyrics) {
         try {
-            const prompt = `Analyze the lyrics of "${title}" by "${artist}" section by section.
+            let prompt;
+            if (rawLyrics) {
+                prompt = `Here are the complete lyrics for "${title}" by "${artist}":
 
-    Return a JSON array where each object has:
+---
+${rawLyrics}
+---
+
+Divide them into their natural sections (Intro, Verse 1, Pre-Chorus, Chorus, Verse 2, Bridge, Outro, etc.) and return a STRICT JSON ARRAY where each item is:
+{
+  "section": "section name",
+  "text": "the exact lyrics lines for this section (copy verbatim from above)",
+  "analysis": "detailed interpretation: what the lines mean, imagery, emotion, context"
+}
+
+Include every section. Do not wrap the array in any object. Output only the JSON array.`;
+            }
+            else {
+                prompt = `Analyze the lyrics of "${title}" by "${artist}" section by section.
+
+    Return a STRICT JSON ARRAY (not an object) where each item is:
     {
       "section": "section name (e.g., Verse 1, Chorus, Bridge)",
-      "text": "the actual lyrics for this section",
+      "text": "representative lines from this section",
       "analysis": "detailed interpretation and meaning"
     }
 
-    Include all major sections of the song.`;
+    Include all major sections of the song. Do not wrap the array in any object.`;
+            }
             const text = await this.tryWithModels(prompt);
             if (!text)
                 return [];
+            console.error("DEBUG: Raw Lyrics Response:", text); // Using error to ensure visibility
             const raw = this.cleanAndParseJSON(text);
-            if (Array.isArray(raw))
+            console.error("DEBUG: Parsed Lyrics Object:", raw);
+            if (Array.isArray(raw)) {
+                console.error("DEBUG: Returning array directly");
                 return raw;
+            }
+            // Handle case where model wraps array in an object (e.g. { "lyrics": [...] })
+            if (raw && typeof raw === 'object') {
+                const values = Object.values(raw);
+                const array = values.find(v => Array.isArray(v));
+                if (array) {
+                    console.error("DEBUG: Found array in object wrapper");
+                    return array;
+                }
+            }
+            console.error("DEBUG: No array found in response");
             return [];
         }
         catch (error) {
@@ -594,7 +630,10 @@ CRITICAL RULES:
                 console.log("========================");
             }
             else {
-                console.error("Failed to list models:", data);
+                console.error("Failed to list models. Response:", data);
+                if (data.error) {
+                    console.error("API Error Details:", JSON.stringify(data.error, null, 2));
+                }
             }
         }
         catch (e) {
@@ -609,9 +648,8 @@ const geminiService = new GeminiService({
     apiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
     defaultModel: "gemini-2.0-flash",
 });
-// This is the named export that fixes your error
-export const getLyricsAnalysis = async (title, artist) => {
-    return await geminiService.getLyricsAnalysis(title, artist);
+export const getLyricsAnalysis = async (title, artist, rawLyrics) => {
+    return await geminiService.getLyricsAnalysis(title, artist, rawLyrics);
 };
 export const searchMusic = async (query) => {
     return await geminiService.searchMusic(query);

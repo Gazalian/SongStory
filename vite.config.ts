@@ -21,6 +21,15 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    proxy: {
+      // Proxies /api/musixmatch/* → https://api.musixmatch.com/ws/1.1/* in dev,
+      // bypassing CORS. In production, api/musixmatch.ts (Vercel function) does the same.
+      '/api/musixmatch': {
+        target: 'https://api.musixmatch.com/ws/1.1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/musixmatch/, ''),
+      },
+    },
   },
   
   build: {
