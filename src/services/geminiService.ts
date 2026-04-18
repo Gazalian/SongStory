@@ -614,19 +614,41 @@ CRITICAL RULES:
 
   /**
    * Get lyrics analysis (this is the one was missing the export!)
+   * @param rawLyrics - Full lyrics text fetched from a lyrics API (Musixmatch / lyrics.ovh).
+   *   When provided, Gemini analyses the real lyrics. Without it, Gemini tries to recall
+   *   lyrics from training data, which it cannot do accurately for copyrighted content.
    */
-  async getLyricsAnalysis(title: string, artist: string): Promise<LyricsSegment[]> {
+  async getLyricsAnalysis(title: string, artist: string, rawLyrics?: string): Promise<LyricsSegment[]> {
     try {
-      const prompt = `Analyze the lyrics of "${title}" by "${artist}" section by section.
+      let prompt: string;
+
+      if (rawLyrics) {
+        prompt = `Here are the complete lyrics for "${title}" by "${artist}":
+
+---
+${rawLyrics}
+---
+
+Divide them into their natural sections (Intro, Verse 1, Pre-Chorus, Chorus, Verse 2, Bridge, Outro, etc.) and return a STRICT JSON ARRAY where each item is:
+{
+  "section": "section name",
+  "text": "the exact lyrics lines for this section (copy verbatim from above)",
+  "analysis": "detailed interpretation: what the lines mean, imagery, emotion, context"
+}
+
+Include every section. Do not wrap the array in any object. Output only the JSON array.`;
+      } else {
+        prompt = `Analyze the lyrics of "${title}" by "${artist}" section by section.
 
     Return a STRICT JSON ARRAY (not an object) where each item is:
     {
       "section": "section name (e.g., Verse 1, Chorus, Bridge)",
-      "text": "the actual lyrics for this section",
+      "text": "representative lines from this section",
       "analysis": "detailed interpretation and meaning"
     }
 
     Include all major sections of the song. Do not wrap the array in any object.`;
+      }
 
       const text = await this.tryWithModels(prompt);
 
@@ -705,12 +727,12 @@ const geminiService = new GeminiService({
   defaultModel: "gemini-2.0-flash",
 });
 
-// This is the named export that fixes your error
 export const getLyricsAnalysis = async (
   title: string,
-  artist: string
+  artist: string,
+  rawLyrics?: string
 ): Promise<LyricsSegment[]> => {
-  return await geminiService.getLyricsAnalysis(title, artist);
+  return await geminiService.getLyricsAnalysis(title, artist, rawLyrics);
 };
 
 export const searchMusic = async (query: string): Promise<SearchResult[]> => {

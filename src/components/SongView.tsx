@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SongData, LyricsSegment, Source } from "../types";
 import { getLyricsAnalysis } from "../services/geminiService";
+import { fetchLyrics } from "../services/lyricsService";
 import {
   Play,
   Share2,
@@ -126,12 +127,14 @@ const SongView: React.FC<SongViewProps> = ({
   };
 
   const handleRevealLyrics = async () => {
-    if (fullLyrics) return; // Already loaded
+    if (fullLyrics) return;
     setIsLyricsAnalysisLoading(true);
     setLyricsError(false);
 
     try {
-      const result = await getLyricsAnalysis(data.title, data.artist);
+      // Fetch real lyrics first; Gemini then analyses the actual text
+      const rawLyrics = await fetchLyrics(data.title, data.artist);
+      const result = await getLyricsAnalysis(data.title, data.artist, rawLyrics ?? undefined);
       if (result && Array.isArray(result) && result.length > 0) {
         setFullLyrics(result);
       } else {
