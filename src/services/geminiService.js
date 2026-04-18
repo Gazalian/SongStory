@@ -317,7 +317,7 @@ CRITICAL RULES:
      */
     async getSongStory(title, artist) {
         try {
-            const prompt = `Generate a comprehensive song analysis for "${title}" by "${artist}".
+            const prompt = `Generate a rich, editorial-quality song story for "${title}" by "${artist}".
 
     Return a JSON object with this exact structure:
     {
@@ -325,36 +325,32 @@ CRITICAL RULES:
       "artist": "${artist}",
       "year": "release year",
       "genre": "primary genre",
-      "themeColor": "hex color",
+      "themeColor": "hex color that captures the song's mood",
       "imageUrl": "suggested cover art URL",
       "quickFacts": {
-        "releaseDate": "exact date",
-        "writers": "songwriters",
-        "producers": "producers",
-        "length": "duration",
-        "album": "album name",
+        "releaseDate": "exact release date",
+        "writers": "songwriters (comma-separated)",
+        "producers": "producers (comma-separated)",
+        "length": "duration e.g. 3:42",
+        "album": "album name or 'Single'",
         "label": "record label"
       },
-      "hook": "one standout fact or achievement",
-      "backstory": "detailed background story",
-      "meaningAndThemes": "thematic analysis",
-      "lyricsMoments": [
-        {"line": "memorable lyric line", "explanation": "its meaning"},
-        {"line": "memorable lyric line", "explanation": "its meaning"},
-        {"line": "memorable lyric line", "explanation": "its meaning"}
-      ],
-      "recordingNotes": "production details",
-      "artistCommentary": "what the artist has said about it",
-      "culturalImpact": "influence and legacy",
+      "hook": "one compelling, specific hook — an achievement, chart fact, or defining cultural moment (2 sentences max)",
+      "backstory": "3–4 paragraph narrative: the circumstances that sparked the song, what was happening in the artist's life, the creative process, and key decisions made during its creation. Be specific and vivid.",
+      "meaningAndThemes": "2–3 paragraphs exploring the song's core themes, emotional depth, symbolism, and what it communicates to listeners. Go beyond the surface.",
+      "recordingNotes": "Specific production details: studio used, equipment or techniques that define the sound, collaborators in the booth, and any notable sonic decisions.",
+      "artistCommentary": "A direct quote or close paraphrase of what the artist has said publicly about this song — interviews, liner notes, social media. Be specific, not generic.",
+      "culturalImpact": "2 paragraphs on the song's legacy: chart performance, awards, cultural moments it soundtracked, how it influenced other artists or the genre.",
       "versions": [
         {"artist": "artist name", "year": "year", "type": "cover/remix/live"}
       ],
-      "trivia": ["interesting fact 1", "interesting fact 2"],
+      "trivia": ["specific, surprising fact 1", "specific, surprising fact 2", "specific, surprising fact 3"],
       "relatedSongs": [
+        {"title": "related song", "artist": "artist"},
         {"title": "related song", "artist": "artist"},
         {"title": "related song", "artist": "artist"}
       ],
-      "mood": "emotional tone/vibe"
+      "mood": "2–3 word emotional tone e.g. 'melancholic and defiant'"
     }`;
             const text = await this.tryWithModels(prompt);
             if (!text)
@@ -373,8 +369,6 @@ CRITICAL RULES:
                 if (!data.themeColor)
                     data.themeColor = this.getDefaultColor('song');
                 // Initialize optional arrays if not provided
-                if (!data.lyricsMoments)
-                    data.lyricsMoments = [];
                 if (!data.versions)
                     data.versions = [];
                 if (!data.trivia)
@@ -543,70 +537,6 @@ CRITICAL RULES:
         }
     }
     /**
-     * Get lyrics analysis (this is the one was missing the export!)
-     * @param rawLyrics - Full lyrics text fetched from a lyrics API (Musixmatch / lyrics.ovh).
-     *   When provided, Gemini analyses the real lyrics. Without it, Gemini tries to recall
-     *   lyrics from training data, which it cannot do accurately for copyrighted content.
-     */
-    async getLyricsAnalysis(title, artist, rawLyrics) {
-        try {
-            let prompt;
-            if (rawLyrics) {
-                prompt = `Here are the complete lyrics for "${title}" by "${artist}":
-
----
-${rawLyrics}
----
-
-Divide them into their natural sections (Intro, Verse 1, Pre-Chorus, Chorus, Verse 2, Bridge, Outro, etc.) and return a STRICT JSON ARRAY where each item is:
-{
-  "section": "section name",
-  "text": "the exact lyrics lines for this section (copy verbatim from above)",
-  "analysis": "detailed interpretation: what the lines mean, imagery, emotion, context"
-}
-
-Include every section. Do not wrap the array in any object. Output only the JSON array.`;
-            }
-            else {
-                prompt = `Analyze the lyrics of "${title}" by "${artist}" section by section.
-
-    Return a STRICT JSON ARRAY (not an object) where each item is:
-    {
-      "section": "section name (e.g., Verse 1, Chorus, Bridge)",
-      "text": "representative lines from this section",
-      "analysis": "detailed interpretation and meaning"
-    }
-
-    Include all major sections of the song. Do not wrap the array in any object.`;
-            }
-            const text = await this.tryWithModels(prompt);
-            if (!text)
-                return [];
-            console.error("DEBUG: Raw Lyrics Response:", text); // Using error to ensure visibility
-            const raw = this.cleanAndParseJSON(text);
-            console.error("DEBUG: Parsed Lyrics Object:", raw);
-            if (Array.isArray(raw)) {
-                console.error("DEBUG: Returning array directly");
-                return raw;
-            }
-            // Handle case where model wraps array in an object (e.g. { "lyrics": [...] })
-            if (raw && typeof raw === 'object') {
-                const values = Object.values(raw);
-                const array = values.find(v => Array.isArray(v));
-                if (array) {
-                    console.error("DEBUG: Found array in object wrapper");
-                    return array;
-                }
-            }
-            console.error("DEBUG: No array found in response");
-            return [];
-        }
-        catch (error) {
-            console.error("Get Lyrics Analysis error", error);
-            return [];
-        }
-    }
-    /**
      * Get current model for debugging
      */
     getCurrentModel() {
@@ -648,9 +578,6 @@ const geminiService = new GeminiService({
     apiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
     defaultModel: "gemini-2.0-flash",
 });
-export const getLyricsAnalysis = async (title, artist, rawLyrics) => {
-    return await geminiService.getLyricsAnalysis(title, artist, rawLyrics);
-};
 export const searchMusic = async (query) => {
     return await geminiService.searchMusic(query);
 };
